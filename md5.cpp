@@ -1,5 +1,6 @@
 #include "md5.h"
 #include <cstring>
+#include <fstream>
 #include <iomanip>
 #include <sstream>
 
@@ -46,11 +47,15 @@ MD5::MD5() : finalized(false) {
 }
 
 void MD5::update(const std::string& input) {
-    if (finalized) {
+    update(reinterpret_cast<const uint8_t*>(input.c_str()), input.length());
+}
+
+void MD5::update(const uint8_t* data, size_t length) {
+    if (finalized || length == 0) {
         return;
     }
 
-    uint32_t inputLen = static_cast<uint32_t>(input.length());
+    uint32_t inputLen = static_cast<uint32_t>(length);
     uint32_t index = (count[0] >> 3) & 0x3F;
 
     if ((count[0] += (inputLen << 3)) < (inputLen << 3)) {
@@ -62,17 +67,17 @@ void MD5::update(const std::string& input) {
     uint32_t i = 0;
 
     if (inputLen >= partLen) {
-        memcpy(&buffer[index], input.c_str(), partLen);
+        memcpy(&buffer[index], data, partLen);
         transform(buffer);
 
         for (i = partLen; i + 63 < inputLen; i += 64) {
-            transform(reinterpret_cast<const uint8_t*>(input.c_str() + i));
+            transform(data + i);
         }
 
         index = 0;
     }
 
-    memcpy(&buffer[index], input.c_str() + i, inputLen - i);
+    memcpy(&buffer[index], data + i, inputLen - i);
 }
 
 std::string MD5::finalize() {
@@ -163,5 +168,27 @@ void MD5::decode(const uint8_t* input, uint32_t* output, size_t length) {
 std::string md5(const std::string& input) {
     MD5 md5;
     md5.update(input);
+    return md5.finalize();
+}
+
+std::string md5_file(const std::string& filepath) {
+    std::ifstream file(filepath, std::ios::binary);
+    if (!file) {
+        return "";
+    }
+
+    MD5 md5;
+    const size_t bufferSize = 8192;
+    char buffer[bufferSize];
+
+    while (file.read(buffer, bufferSize)) {
+        md5.update(reinterpret_cast<const uint8_t*>(buffer), static_cast<size_t>(file.gcount()));
+    }
+
+    if (file.gcount() > 0) {
+        md5.update(reinterpret_cast<const uint8_t*>(buffer), static_cast<size_t>(file.gcount()));
+    }
+
+    file.close();
     return md5.finalize();
 }
