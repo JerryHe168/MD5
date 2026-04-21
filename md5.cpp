@@ -92,9 +92,9 @@ std::string MD5::finalize() {
 
     index = (count[0] >> 3) & 0x3F;
     padLen = (index < 56) ? (56 - index) : (120 - index);
-    update(std::string(reinterpret_cast<const char*>(MD5_PADDING), padLen));
+    update(MD5_PADDING, static_cast<size_t>(padLen));
 
-    update(std::string(reinterpret_cast<const char*>(bits), 8));
+    update(bits, 8);
 
     uint32_t digest[4] = {a, b, c, d};
     uint8_t result[16];
