@@ -65,16 +65,17 @@ int main(int argc, char* argv[]) {
         } else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--file") == 0) {
             if (i + 1 < argc) {
                 std::string filepath(argv[i + 1]);
-                std::string result = md5_file(filepath);
-                if (result.empty()) {
-                    std::cerr << "Error: Cannot open file: " << filepath << std::endl;
-                    return 1;
+                std::string result;
+                MD5Error error = md5_file(filepath, result);
+                if (error != MD5_SUCCESS) {
+                    std::cerr << "Error: " << md5_error_string(error) << ": " << filepath << std::endl;
+                    return static_cast<int>(error);
                 }
                 std::cout << "MD5(\"" << filepath << "\") = " << result << std::endl;
                 i++;
             } else {
                 std::cerr << "Error: -f/--file requires a file path argument" << std::endl;
-                return 1;
+                return static_cast<int>(MD5_ERROR_INVALID_ARGUMENT);
             }
         } else {
             std::cerr << "Unknown option: " << argv[i] << std::endl;

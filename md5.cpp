@@ -1,5 +1,7 @@
 #include "md5.h"
 #include <cstring>
+#include <cerrno>
+#include <cstdio>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
@@ -171,24 +173,82 @@ std::string md5(const std::string& input) {
     return md5.finalize();
 }
 
-std::string md5_file(const std::string& filepath) {
-    std::ifstream file(filepath, std::ios::binary);
-    if (!file) {
-        return "";
+const char* md5_error_string(MD5Error error) {
+    switch (error) {
+        case MD5_SUCCESS:
+            return "Success";
+        case MD5_ERROR_FILE_NOT_FOUND:
+            return "File not found";
+        case MD5_ERROR_PERMISSION_DENIED:
+            return "Permission denied";
+        case MD5_ERROR_READ_FAILED:
+            return "Read operation failed";
+        case MD5_ERROR_INVALID_ARGUMENT:
+            return "Invalid argument";
+        case MD5_ERROR_UNKNOWN:
+        default:
+            return "Unknown error";
+    }
+}
+
+MD5Error md5_file(const std::string& filepath, std::string& out_hash) {
+    out_hash.clear();
+
+    if (filepath.empty()) {
+        return MD5_ERROR_INVALID_ARGUMENT;
+    }
+
+    FILE* file = nullptr;
+    errno = 0;
+
+#ifdef _WIN32
+    if (fopen_s(&file, filepath.c_str(), "rb") != 0 || file == nullptr) {
+        int errorCode = errno;
+#else
+    file = fopen(filepath.c_str(), "rb");
+    if (file == nullptr) {
+        int errorCode = errno;
+#endif
+        switch (errorCode) {
+            case ENOENT:
+                return MD5_ERROR_FILE_NOT_FOUND;
+            case EACCES:
+            case EPERM:
+                return MD5_ERROR_PERMISSION_DENIED;
+            default:
+                return MD5_ERROR_FILE_NOT_FOUND;
+        }
     }
 
     MD5 md5;
     const size_t bufferSize = 8192;
-    char buffer[bufferSize];
+    uint8_t buffer[bufferSize];
+    size_t bytesRead;
+    bool readError = false;
 
-    while (file.read(buffer, bufferSize)) {
-        md5.update(reinterpret_cast<const uint8_t*>(buffer), static_cast<size_t>(file.gcount()));
+    while ((bytesRead = fread(buffer, 1, bufferSize, file)) > 0) {
+        md5.update(buffer, bytesRead);
     }
 
-    if (file.gcount() > 0) {
-        md5.update(reinterpret_cast<const uint8_t*>(buffer), static_cast<size_t>(file.gcount()));
+    if (ferror(file)) {
+        readError = true;
     }
 
-    file.close();
-    return md5.finalize();
+    fclose(file);
+
+    if (readError) {
+        return MD5_ERROR_READ_FAILED;
+    }
+
+    out_hash = md5.finalize();
+    return MD5_SUCCESS;
+}
+
+std::string md5_file(const std::string& filepath) {
+    std::string hash;
+    MD5Error error = md5_file(filepath, hash);
+    if (error == MD5_SUCCESS) {
+        return hash;
+    }
+    return "";
 }
