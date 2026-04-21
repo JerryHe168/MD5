@@ -2,9 +2,6 @@
 #include <cstring>
 #include <cerrno>
 #include <cstdio>
-#include <fstream>
-#include <iomanip>
-#include <sstream>
 
 const uint8_t MD5_PADDING[64] = {
     0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
