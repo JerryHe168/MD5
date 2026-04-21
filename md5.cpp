@@ -99,7 +99,7 @@ std::string MD5::finalize() {
 
     char hex[33];
     for (int i = 0; i < 16; i++) {
-        sprintf_s(hex + i * 2, 3, "%02x", result[i]);
+        snprintf(hex + i * 2, 3, "%02x", result[i]);
     }
     hex[32] = '\0';
 
