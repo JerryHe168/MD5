@@ -8,6 +8,7 @@ class MD5 {
 public:
     MD5();
     void update(const std::string& input);
+    void update(const uint8_t* data, size_t length);
     std::string finalize();
 
 private:
@@ -22,5 +23,6 @@ private:
 };
 
 std::string md5(const std::string& input);
+std::string md5_file(const std::string& filepath);
 
 #endif // MD5_H
