@@ -199,16 +199,21 @@ MD5Error md5_file(const std::string& filepath, std::string& out_hash) {
     }
 
     FILE* file = nullptr;
+    int errorCode = 0;
     errno = 0;
 
 #ifdef _WIN32
-    if (fopen_s(&file, filepath.c_str(), "rb") != 0 || file == nullptr) {
-        int errorCode = errno;
+    if (fopen_s(&file, filepath.c_str(), "rb") != 0) {
+        errorCode = errno;
+    }
 #else
     file = fopen(filepath.c_str(), "rb");
     if (file == nullptr) {
-        int errorCode = errno;
+        errorCode = errno;
+    }
 #endif
+
+    if (file == nullptr) {
         switch (errorCode) {
             case ENOENT:
                 return MD5_ERROR_FILE_NOT_FOUND;
